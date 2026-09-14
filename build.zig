@@ -1,4 +1,4 @@
-// NOTE: This file was written by Claude Sonnet 5 High on the 13th of September 2026.
+// NOTE: This file was written by Claude Sonnet 5 High on 14.09.2026.
 // Following edits are documented at the very bottom of this file.
 
 const std = @import("std");
@@ -33,6 +33,7 @@ const BoardConfig = struct {
     arch: std.Target.Cpu.Arch,
     cpu_model: std.Target.Query.CpuModel,
     load_addr: u64,
+    peripheral_base: u64, // GPIO/UART/etc. all sit at fixed offsets from this
     image_name: []const u8,
     linker_script: []const u8,
     qemu_machine: ?[]const u8, // null = no QEMU machine type for this board yet
@@ -45,6 +46,7 @@ fn boardConfig(board: Board) BoardConfig {
             .arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a53 },
             .load_addr = 0x80000,
+            .peripheral_base = 0x3F000000,
             .image_name = "kernel8.img",
             .linker_script = "linker/rpi-64.ld",
             .qemu_machine = "raspi3b",
@@ -54,6 +56,7 @@ fn boardConfig(board: Board) BoardConfig {
             .arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a72 },
             .load_addr = 0x80000,
+            .peripheral_base = 0xFE000000, // BCM2711 low-peripheral mode
             .image_name = "kernel8-rpi4.img",
             .linker_script = "linker/rpi-64.ld",
             // Mainline since QEMU 9.0 (early 2024). Rougher than raspi3b:
@@ -87,6 +90,7 @@ pub fn build(b: *std.Build) void {
     const opts = b.addOptions();
     opts.addOption(Board, "board", board);
     opts.addOption(u64, "load_addr", cfg.load_addr);
+    opts.addOption(u64, "peripheral_base", cfg.peripheral_base);
 
     // As of Zig 0.16, addExecutable no longer takes root_source_file /
     // target / optimize directly — those live on a Module now, and

@@ -32,6 +32,7 @@ const Board = enum {
 const BoardConfig = struct {
     arch: std.Target.Cpu.Arch,
     cpu_model: std.Target.Query.CpuModel,
+    cpu_features_sub: std.Target.Cpu.Feature.Set = std.Target.Cpu.Feature.Set.empty,
     load_addr: u64,
     peripheral_base: u64, // GPIO/UART/etc. all sit at fixed offsets from this
     image_name: []const u8,
@@ -55,6 +56,7 @@ fn boardConfig(board: Board) BoardConfig {
         .pi4 => .{
             .arch = .aarch64,
             .cpu_model = .{ .explicit = &std.Target.aarch64.cpu.cortex_a72 },
+            .cpu_features_sub = std.Target.aarch64.featureSet(&.{ .neon, .fp_armv8 }),
             .load_addr = 0x80000,
             .peripheral_base = 0xFE000000, // BCM2711 low-peripheral mode
             .image_name = "kernel8-rpi4.img",
@@ -81,10 +83,10 @@ pub fn build(b: *std.Build) void {
     const target = b.resolveTargetQuery(.{
         .cpu_arch = cfg.arch,
         .cpu_model = cfg.cpu_model,
+        .cpu_features_sub = cfg.cpu_features_sub,
         .os_tag = .freestanding,
         .abi = .none,
     });
-
     // Make the board choice visible inside the kernel too, so src/*.zig
     // never has to re-hardcode a load address or duplicate this table.
     const opts = b.addOptions();
@@ -123,7 +125,18 @@ pub fn build(b: *std.Build) void {
     // `zig build run` — only wired up for boards QEMU actually emulates.
     if (cfg.qemu_machine) |machine| {
         const run = b.addSystemCommand(&.{
-            "qemu-system-aarch64", "-M", machine, "-m", cfg.qemu_mem, "-serial", "stdio", "-kernel",
+            "qemu-system-aarch64",
+            "-M",
+            machine,
+            "-m",
+            cfg.qemu_mem,
+            "-serial",
+            "stdio",
+            "-d",
+            "int",
+            "-D",
+            "qemu.log",
+            "-kernel",
         });
         run.addFileArg(img.getOutput());
         b.step("run", "Run PiOS in QEMU").dependOn(&run.step);

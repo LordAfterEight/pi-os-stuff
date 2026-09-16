@@ -130,6 +130,8 @@ pub fn build(b: *std.Build) void {
             machine,
             "-m",
             cfg.qemu_mem,
+            "-display",
+            "gtk",
             "-serial",
             "stdio",
             "-d",

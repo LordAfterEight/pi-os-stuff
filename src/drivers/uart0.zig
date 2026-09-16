@@ -1,4 +1,5 @@
 const build_config = @import("build_config");
+const std = @import("std");
 
 const BASE_PERIPHERAL = build_config.peripheral_base;
 const GPIO = BASE_PERIPHERAL + 0x200000;
@@ -59,11 +60,16 @@ pub fn init() void {
     gpioptr.* = (gpioptr.* & ~mask) | ((0b1) | (0b11 << 8));
 }
 
+/// Writes ASCII bytes to UART0. Invalid characters are replaced by '�'
 pub fn write(msg: []const u8) void {
     const frptr: *volatile u32 = @ptrFromInt(UART0 + UART_FR);
     const drptr: *volatile u32 = @ptrFromInt(UART0 + UART_DR);
     for (msg) |c| {
         while (((frptr.* >> 5) & 1) != 0) {}
-        drptr.* = c;
+        if (std.ascii.isAscii(c)) {
+            drptr.* = c;
+        } else {
+            drptr.* = '�';
+        }
     }
 }

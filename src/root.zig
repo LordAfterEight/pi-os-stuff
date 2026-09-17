@@ -4,8 +4,13 @@ pub const drivers = struct {
     pub const uart = @import("drivers/uart.zig");
     pub const mmio = @import("drivers/mmio.zig");
     pub const vidcore = struct {
-        pub const mb = @import("mb.zig");
+        pub const mb = @import("drivers/mb.zig");
+        pub const fb = @import("drivers/fb.zig");
     };
+};
+
+pub const ui = struct {
+    pub const text = @import("ui/text.zig");
 };
 
 pub const constants = struct {

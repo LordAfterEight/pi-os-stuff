@@ -1,12 +1,12 @@
-const os = @import("../root.zig");
+const constants = @import("../constants.zig");
 
-pub fn write(reg: usize, val: u32) void {
-    const ptr: *volatile u32 = @ptrFromInt(reg);
+pub fn write(reg: u32, val: u32) void {
+    const ptr: *volatile u32 = @ptrFromInt(@as(usize, reg));
     ptr.* = val;
 }
 
-pub fn read(reg: usize) u32 {
-    const ptr: *volatile u32 = @ptrFromInt(reg);
+pub fn read(reg: u32) u32 {
+    const ptr: *volatile u32 = @ptrFromInt(@as(usize, reg));
     return ptr.*;
 }
 
@@ -19,7 +19,7 @@ pub fn call(
 ) !void {
     if (pin_number > field_max) return error.PinNumberTooBig;
 
-    const field_mask: u32 = (@as(u32, 1) << field_size) - 1;
+    const field_mask: u32 = (@as(u32, 1) << @intCast(field_size)) - 1;
 
     if (value > field_mask) return error.ValueTooBig;
 
@@ -34,58 +34,34 @@ pub fn call(
 }
 
 pub fn set(pin_number: u32, val: u32) !void {
-    return call(
-        pin_number,
-        val,
-        os.constants.gpio.GPSET0,
-        1,
-        os.constants.gpio.MAX_PIN,
-    );
+    return call(pin_number, val, constants.GPIO.GPSET0, 1, constants.GPIO.MAX_PIN);
 }
 
 pub fn clear(pin_number: u32, val: u32) !void {
-    return call(
-        pin_number,
-        val,
-        os.constants.gpio.GPCLR0,
-        1,
-        os.constants.gpio.MAX_PIN,
-    );
+    return call(pin_number, val, constants.GPIO.GPCLR0, 1, constants.GPIO.MAX_PIN);
 }
 
 pub fn pull(pin_number: u32, val: u32) !void {
-    return call(
-        pin_number,
-        val,
-        os.constants.gpio.PUP_PDN_CNTRL_REG0,
-        2,
-        os.constants.gpio.MAX_PIN,
-    );
+    return call(pin_number, val, constants.GPIO.PUP_PDN_CNTRL_REG0, 2, constants.GPIO.MAX_PIN);
 }
 
 pub fn function(pin_number: u32, val: u32) !void {
-    return call(
-        pin_number,
-        val,
-        os.constants.gpio.GPSEL0,
-        3,
-        os.constants.gpio.MAX_PIN,
-    );
+    return call(pin_number, val, constants.GPIO.GPSEL0, 3, constants.GPIO.MAX_PIN);
 }
 
 pub fn use_as_alt3(pin_number: u32) void {
-    pull(pin_number, os.constants.gpio_mode.PullNone) catch unreachable;
-    function(pin_number, os.constants.gpio.FUNCTION_ALT3) catch unreachable;
+    pull(pin_number, constants.GPIOMode.PullNone) catch unreachable;
+    function(pin_number, constants.GPIO.FUNCTION_ALT3) catch unreachable;
 }
 
 pub fn use_as_alt5(pin_number: u32) void {
-    pull(pin_number, os.constants.gpio_mode.PullNone) catch unreachable;
-    function(pin_number, os.constants.gpio.FUNCTION_ALT5) catch unreachable;
+    pull(pin_number, constants.GPIOMode.PullNone) catch unreachable;
+    function(pin_number, constants.GPIO.FUNCTION_ALT5) catch unreachable;
 }
 
 pub fn init_output_pin_with_pull_none(pin_number: u32) void {
-    pull(pin_number, os.constants.gpio_mode.PullNone) catch unreachable;
-    function(pin_number, os.constants.gpio.FUNCTION_OUT) catch unreachable;
+    pull(pin_number, constants.GPIOMode.PullNone) catch unreachable;
+    function(pin_number, constants.GPIO.FUNCTION_OUT) catch unreachable;
 }
 
 pub fn set_pin_output_bool(pin_number: u32, on_or_off: u32) void {

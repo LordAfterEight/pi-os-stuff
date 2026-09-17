@@ -133,6 +133,8 @@ pub fn build(b: *std.Build) void {
             "-display",
             "gtk",
             "-serial",
+            "null",
+            "-serial",
             "stdio",
             "-d",
             "int",

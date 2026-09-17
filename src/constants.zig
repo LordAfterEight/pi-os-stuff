@@ -60,3 +60,16 @@ pub const UART1 = struct {
     pub const CLOCK: u32 = 500000000;
     pub const MAX_QUEUE: u32 = 16 * 1024;
 };
+
+pub const VidCore = struct {
+    pub const VIDEOCORE_MBOX = BASE_PERIPHERAL + 0xB880;
+    pub const MBOX_READ = VIDEOCORE_MBOX;
+    pub const MBOX_POLL = VIDEOCORE_MBOX + 0x10;
+    pub const MBOX_SENDER = VIDEOCORE_MBOX + 0x14;
+    pub const MBOX_STATUS = VIDEOCORE_MBOX + 0x18;
+    pub const MBOX_CONFIG = VIDEOCORE_MBOX + 0x1C;
+    pub const MBOX_WRITE = VIDEOCORE_MBOX + 0x20;
+    pub const MBOX_RESPONSE = 0x80000000;
+    pub const MBOX_FULL = 0x80000000;
+    pub const MBOX_EMPTY = 0x40000000;
+};

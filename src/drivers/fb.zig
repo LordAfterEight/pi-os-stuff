@@ -4,6 +4,7 @@
 const mb = @import("mb.zig");
 const vidcore = @import("../constants.zig").VidCore;
 const text = @import("../ui/text.zig");
+const Color = @import("../ui/color.zig").Color;
 
 pub const FONT_WIDTH = 8;
 pub const FONT_HEIGHT = 8;
@@ -94,7 +95,7 @@ pub fn init() void {
     }
 }
 
-pub fn drawPixel(x: i32, y: i32, attr: u8) void {
+pub fn drawPixel(x: i32, y: i32, color: Color) void {
     if (x < 0 or y < 0 or
         x >= @as(i32, @intCast(width)) or
         y >= @as(i32, @intCast(height)))
@@ -103,22 +104,22 @@ pub fn drawPixel(x: i32, y: i32, attr: u8) void {
     const offs = @as(usize, @intCast(y)) * @as(usize, pitch) +
         @as(usize, @intCast(x)) * 4;
 
-    const color = vgapal[attr & 0x0f];
     const pixel: *volatile u32 = @ptrCast(@alignCast(&fb[offs]));
-    pixel.* = color;
+    pixel.* = if (isrgb != 0)
+        (@as(u32, color.a) << 24) | (@as(u32, color.b) << 16) | (@as(u32, color.g) << 8) | color.r
+    else
+        (@as(u32, color.a) << 24) | (@as(u32, color.r) << 16) | (@as(u32, color.g) << 8) | color.b;
 }
 
-pub fn drawRect(x1: i32, y1: i32, x2: i32, y2: i32, attr: u8, fill: bool) void {
+pub fn drawRect(x1: i32, y1: i32, x2: i32, y2: i32, color: Color, fill: bool) void {
     var y = y1;
 
     while (y <= y2) {
         var x = x1;
 
         while (x <= x2) {
-            if ((x == x1 or x == x2) or (y == y1 or y == y2)) {
-                drawPixel(x, y, attr);
-            } else if (fill) {
-                drawPixel(x, y, (attr & 0xf0) >> 4);
+            if ((x == x1 or x == x2) or (y == y1 or y == y2) or fill) {
+                drawPixel(x, y, color);
             }
 
             x += 1;
@@ -128,7 +129,7 @@ pub fn drawRect(x1: i32, y1: i32, x2: i32, y2: i32, attr: u8, fill: bool) void {
     }
 }
 
-pub fn drawLine(x1: i32, y1: i32, x2: i32, y2: i32, attr: u8) void {
+pub fn drawLine(x1: i32, y1: i32, x2: i32, y2: i32, color: Color) void {
     const dx: i32 = x2 - x1;
     const dy: i32 = y2 - y1;
     var p: i32 = 2 * dy - dx;
@@ -137,11 +138,11 @@ pub fn drawLine(x1: i32, y1: i32, x2: i32, y2: i32, attr: u8) void {
 
     while (x < x2) {
         if (p >= 0) {
-            drawPixel(x, y, attr);
+            drawPixel(x, y, color);
             y += 1;
             p = p + 2 * dy - 2 * dx;
         } else {
-            drawPixel(x, y, attr);
+            drawPixel(x, y, color);
             p = p + 2 * dy;
         }
 
@@ -149,27 +150,27 @@ pub fn drawLine(x1: i32, y1: i32, x2: i32, y2: i32, attr: u8) void {
     }
 }
 
-pub fn drawCircle(x0: i32, y0: i32, radius: i32, attr: u8, fill: bool) void {
+pub fn drawCircle(x0: i32, y0: i32, radius: i32, color: Color, fill: bool) void {
     var x = radius;
     var y: i32 = 0;
     var err: i32 = 0;
 
     while (x >= y) {
         if (fill) {
-            drawLine(x0 - y, y0 + x, x0 + y, y0 + x, (attr & 0xf0) >> 4);
-            drawLine(x0 - x, y0 + y, x0 + x, y0 + y, (attr & 0xf0) >> 4);
-            drawLine(x0 - x, y0 - y, x0 + x, y0 - y, (attr & 0xf0) >> 4);
-            drawLine(x0 - y, y0 - x, x0 + y, y0 - x, (attr & 0xf0) >> 4);
+            drawLine(x0 - y, y0 + x, x0 + y, y0 + x, color);
+            drawLine(x0 - x, y0 + y, x0 + x, y0 + y, color);
+            drawLine(x0 - x, y0 - y, x0 + x, y0 - y, color);
+            drawLine(x0 - y, y0 - x, x0 + y, y0 - x, color);
         }
 
-        drawPixel(x0 - y, y0 + x, attr);
-        drawPixel(x0 + y, y0 + x, attr);
-        drawPixel(x0 - x, y0 + y, attr);
-        drawPixel(x0 + x, y0 + y, attr);
-        drawPixel(x0 - x, y0 - y, attr);
-        drawPixel(x0 + x, y0 - y, attr);
-        drawPixel(x0 - y, y0 - x, attr);
-        drawPixel(x0 + y, y0 - x, attr);
+        drawPixel(x0 - y, y0 + x, color);
+        drawPixel(x0 + y, y0 + x, color);
+        drawPixel(x0 - x, y0 + y, color);
+        drawPixel(x0 + x, y0 + y, color);
+        drawPixel(x0 - x, y0 - y, color);
+        drawPixel(x0 + x, y0 - y, color);
+        drawPixel(x0 - y, y0 - x, color);
+        drawPixel(x0 + y, y0 - x, color);
 
         if (err <= 0) {
             y += 1;
@@ -183,7 +184,7 @@ pub fn drawCircle(x0: i32, y0: i32, radius: i32, attr: u8, fill: bool) void {
     }
 }
 
-pub fn drawChar(ch: u8, x: i32, y: i32, attr: u8) void {
+pub fn drawChar(ch: u8, x: i32, y: i32, color: Color) void {
     const glyph_index: usize = if (ch < FONT_NUMGLYPHS) ch else 0;
 
     for (0..FONT_HEIGHT) |i| {
@@ -191,21 +192,19 @@ pub fn drawChar(ch: u8, x: i32, y: i32, attr: u8) void {
 
         for (0..FONT_WIDTH) |j| {
             const mask: u8 = @as(u8, 1) << @intCast(j);
-            const col: u8 = if ((glyph & mask) != 0)
-                attr & 0x0f
-            else
-                (attr & 0xf0) >> 4;
 
-            drawPixel(
-                x + @as(i32, @intCast(j)),
-                y + @as(i32, @intCast(i)),
-                col,
-            );
+            if ((glyph & mask) != 0) {
+                drawPixel(
+                    x + @as(i32, @intCast(j)),
+                    y + @as(i32, @intCast(i)),
+                    color,
+                );
+            }
         }
     }
 }
 
-pub fn drawString(x_: i32, y_: i32, s: []const u8, attr: u8) void {
+pub fn drawString(x_: i32, y_: i32, s: []const u8, color: Color) void {
     var x = x_;
     var y = y_;
 
@@ -216,7 +215,7 @@ pub fn drawString(x_: i32, y_: i32, s: []const u8, attr: u8) void {
             x = 0;
             y += FONT_HEIGHT;
         } else {
-            drawChar(ch, x, y, attr);
+            drawChar(ch, x, y, color);
             x += FONT_WIDTH;
         }
     }

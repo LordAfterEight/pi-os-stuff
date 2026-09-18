@@ -1,3 +1,5 @@
+const std = @import("std");
+
 // NOTE: This file was directly translated from C to Zig using GPT-5.6 Luna on 17.09.2026
 // Original code is from https://github.com/sypstraw/rpi4-osdev/blob/master/part5-framebuffer/fb.c
 
@@ -31,11 +33,11 @@ pub const vgapal = [_]u32{
     0xFFFFFF,
 };
 
-var width: u32 = 0;
-var height: u32 = 0;
-var pitch: u32 = 0;
-var isrgb: u32 = 0;
-var fb: [*]volatile u8 = undefined;
+pub var width: u32 = 0;
+pub var height: u32 = 0;
+pub var pitch: u32 = 0;
+pub var isrgb: u32 = 0;
+pub var fb: [*]volatile u8 = undefined;
 
 pub fn init() void {
     mb.mbox[0] = 35 * 4;
@@ -111,6 +113,15 @@ pub fn drawPixel(x: i32, y: i32, color: Color) void {
         (@as(u32, color.a) << 24) | (@as(u32, color.r) << 16) | (@as(u32, color.g) << 8) | color.b;
 }
 
+pub fn getPixel(x: i32, y: i32) Color {
+    const offs = @as(usize, @intCast(y)) * @as(usize, pitch) +
+        @as(usize, @intCast(x)) * 4;
+
+    const pixel: *volatile u32 = @ptrCast(@alignCast(&fb[offs]));
+    const value = pixel.*;
+    return Color.from_u32(value);
+}
+
 pub fn drawRect(x1: i32, y1: i32, x2: i32, y2: i32, color: Color, fill: bool) void {
     var y = y1;
 
@@ -129,24 +140,67 @@ pub fn drawRect(x1: i32, y1: i32, x2: i32, y2: i32, color: Color, fill: bool) vo
     }
 }
 
-pub fn drawLine(x1: i32, y1: i32, x2: i32, y2: i32, color: Color) void {
-    const dx: i32 = x2 - x1;
-    const dy: i32 = y2 - y1;
-    var p: i32 = 2 * dy - dx;
-    var x = x1;
-    var y = y1;
+/// Gets a buffer of colors from the framebuffer.
+pub fn getRect(x1: i32, y1: i32, x2: i32, y2: i32) []Color {
+    const rect_width = x2 - x1 + 1;
+    const rect_height = y2 - y1 + 1;
+    const size = rect_width * rect_height;
+    const buffer = std.allocator.alloc(Color, size) orelse return null;
 
-    while (x < x2) {
-        if (p >= 0) {
-            drawPixel(x, y, color);
-            y += 1;
-            p = p + 2 * dy - 2 * dx;
-        } else {
-            drawPixel(x, y, color);
-            p = p + 2 * dy;
+    var y = y1;
+    var x = x1;
+    var i: usize = 0;
+
+    while (y <= y2) {
+        while (x <= x2) {
+            buffer[i] = getPixel(x, y);
+            x += 1;
+            i += 1;
         }
 
-        x += 1;
+        y += 1;
+        x = x1;
+    }
+
+    return buffer;
+}
+
+pub fn drawLine(
+    x0: i32,
+    y0: i32,
+    x1: i32,
+    y1: i32,
+    color: Color,
+) void {
+    var x = x0;
+    var y = y0;
+
+    const dx: i32 = if (x0 < x1) x1 - x0 else x0 - x1;
+    const sx: i32 = if (x0 < x1) 1 else -1;
+
+    const dy: i32 = if (y0 < y1) y1 - y0 else y0 - y1;
+    const sy: i32 = if (y0 < y1) 1 else -1;
+
+    var err: i32 = dx - dy;
+
+    while (true) {
+        drawPixel(x, y, color);
+
+        if (x == x1 and y == y1) {
+            break;
+        }
+
+        const e2 = 2 * err;
+
+        if (e2 > -dy) {
+            err -= dy;
+            x += sx;
+        }
+
+        if (e2 < dx) {
+            err += dx;
+            y += sy;
+        }
     }
 }
 

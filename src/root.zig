@@ -13,6 +13,7 @@ pub const ui = struct {
     pub const color = @import("ui/color.zig");
     pub const text = @import("ui/text.zig");
     pub const window = @import("ui/window.zig");
+    pub const compositor = @import("ui/compositor.zig");
 };
 
 pub const constants = struct {

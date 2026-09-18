@@ -136,10 +136,6 @@ pub fn build(b: *std.Build) void {
             "null",
             "-serial",
             "stdio",
-            "-d",
-            "int",
-            "-D",
-            "qemu.log",
             "-kernel",
         });
         run.addFileArg(img.getOutput());
